@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -30,6 +30,42 @@ import { useProxyStore } from "../state/proxyStore";
 import { NearbyUser } from "../types/proxy";
 import { cn } from "../utils/cn";
 
+// Common interest keywords to extract from bios
+const INTEREST_KEYWORDS = [
+  "coffee", "yoga", "hiking", "travel", "photography", "music", "art",
+  "fitness", "cooking", "reading", "movies", "tech", "startup", "design",
+  "fashion", "dancing", "running", "gym", "wine", "food", "foodie",
+  "adventure", "outdoors", "nature", "beach", "mountains", "city",
+  "books", "writing", "gaming", "sports", "basketball", "soccer", "tennis",
+  "meditation", "wellness", "health", "vegan", "vegetarian", "brunch",
+  "cocktails", "nightlife", "concerts", "festivals", "theater", "comedy",
+  "dogs", "cats", "pets", "animals", "creative", "entrepreneur", "marketing",
+  "finance", "investing", "crypto", "ai", "software", "coding", "developer"
+];
+
+// Extract interests from a bio text
+function extractInterests(bio: string): string[] {
+  const lowerBio = bio.toLowerCase();
+  return INTEREST_KEYWORDS.filter(keyword => lowerBio.includes(keyword));
+}
+
+// Calculate interest match score between two users
+function calculateInterestScore(userBio: string, otherBio: string): number {
+  const userInterests = extractInterests(userBio);
+  const otherInterests = extractInterests(otherBio);
+
+  if (userInterests.length === 0 || otherInterests.length === 0) {
+    return 0;
+  }
+
+  const matchingInterests = userInterests.filter(interest =>
+    otherInterests.includes(interest)
+  );
+
+  // Score is based on number of matching interests, weighted by rarity
+  return matchingInterests.length * 10;
+}
+
 type ForYouNavProp = NativeStackNavigationProp<RootStackParamList>;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -40,9 +76,10 @@ interface UserCardProps {
   onSendInterest: () => void;
   hasSentInterest: boolean;
   connectionStatus?: string;
+  matchingInterests: string[];
 }
 
-function UserCard({ user, isActive, onSendInterest, hasSentInterest, connectionStatus }: UserCardProps) {
+function UserCard({ user, isActive, onSendInterest, hasSentInterest, connectionStatus, matchingInterests }: UserCardProps) {
   const insets = useSafeAreaInsets();
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -218,15 +255,32 @@ function UserCard({ user, isActive, onSendInterest, hasSentInterest, connectionS
             <View className="flex-row items-center mb-3">
               <Ionicons name="location" size={16} color="#FF8E72" />
               <Text className="text-white/90 text-base ml-1">
-                {user.distance}m away
+                {user.venue || "In your city"}
               </Text>
-              {user.venue && (
-                <>
-                  <Text className="text-white/60 mx-2">•</Text>
-                  <Text className="text-white/80 text-base">{user.venue}</Text>
-                </>
-              )}
             </View>
+
+            {/* Matching Interests Tags */}
+            {matchingInterests.length > 0 && (
+              <View className="flex-row flex-wrap mb-3">
+                {matchingInterests.slice(0, 3).map((interest, idx) => (
+                  <View
+                    key={interest}
+                    className="bg-[#FF6B6B]/30 rounded-full px-3 py-1 mr-2 mb-1"
+                  >
+                    <Text className="text-white text-xs font-medium capitalize">
+                      {interest}
+                    </Text>
+                  </View>
+                ))}
+                {matchingInterests.length > 3 && (
+                  <View className="bg-white/20 rounded-full px-3 py-1">
+                    <Text className="text-white text-xs">
+                      +{matchingInterests.length - 3} more
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
 
             <Text
               className="text-white/90 text-base leading-5"
@@ -317,13 +371,28 @@ export default function ForYouScreen() {
   const nearbyUsers = useProxyStore((s) => s.nearbyUsers);
   const connections = useProxyStore((s) => s.connections);
   const sendInterest = useProxyStore((s) => s.sendInterest);
+  const currentUser = useProxyStore((s) => s.currentUser);
 
   const [activeIndex, setActiveIndex] = useState(0);
 
-  // Shuffle users for algorithmic feed effect
-  const shuffledUsers = useRef(
-    [...nearbyUsers].sort(() => Math.random() - 0.5)
-  ).current;
+  // Sort users by interest match score (city-wide, not proximity-based)
+  const interestMatchedUsers = useMemo(() => {
+    const userBio = currentUser?.bio || "";
+
+    return [...nearbyUsers]
+      .map(user => ({
+        user,
+        score: calculateInterestScore(userBio, user.bio),
+        matchingInterests: extractInterests(userBio).filter(interest =>
+          extractInterests(user.bio).includes(interest)
+        ),
+      }))
+      .sort((a, b) => {
+        // Sort by score descending, then add some randomness for variety
+        if (b.score !== a.score) return b.score - a.score;
+        return Math.random() - 0.5;
+      });
+  }, [nearbyUsers, currentUser?.bio]);
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -355,15 +424,16 @@ export default function ForYouScreen() {
   return (
     <View className="flex-1 bg-black">
       <FlatList
-        data={shuffledUsers}
-        keyExtractor={(item) => item.id}
+        data={interestMatchedUsers}
+        keyExtractor={(item) => item.user.id}
         renderItem={({ item, index }) => (
           <UserCard
-            user={item}
+            user={item.user}
             isActive={index === activeIndex}
-            onSendInterest={() => handleSendInterest(item.id)}
-            hasSentInterest={hasInterest(item.id)}
-            connectionStatus={getConnectionStatus(item.id)}
+            onSendInterest={() => handleSendInterest(item.user.id)}
+            hasSentInterest={hasInterest(item.user.id)}
+            connectionStatus={getConnectionStatus(item.user.id)}
+            matchingInterests={item.matchingInterests}
           />
         )}
         pagingEnabled

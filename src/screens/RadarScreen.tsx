@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { View, Text, Pressable, Switch, ScrollView } from "react-native";
+import { View, Text, Pressable, Switch } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
@@ -21,10 +21,12 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import { useProxyStore } from "../state/proxyStore";
-import { NearbyUser, PROXIMITY_OPTIONS, ProximityLevel } from "../types/proxy";
-import { cn } from "../utils/cn";
+import { NearbyUser } from "../types/proxy";
 
 type RadarScreenNavProp = NativeStackNavigationProp<RootStackParamList>;
+
+// Same venue threshold in meters (approximately same address/building)
+const SAME_VENUE_THRESHOLD = 15;
 
 function NearbyUserCard({
   user,
@@ -54,13 +56,6 @@ function NearbyUserCard({
       )
     );
   }, []);
-
-  // Format distance nicely
-  const formatDistance = (meters: number) => {
-    if (meters < 100) return `${meters}m`;
-    if (meters < 1000) return `${Math.round(meters / 10) * 10}m`;
-    return `${(meters / 1000).toFixed(1)}km`;
-  };
 
   return (
     <Animated.View
@@ -94,75 +89,21 @@ function NearbyUserCard({
           <Text className="text-[#2D2D2D] text-lg font-semibold">
             {user.name}, {user.age}
           </Text>
-          <View className="flex-row items-center">
-            {user.venue && (
-              <Text className="text-gray-500 text-sm" numberOfLines={1}>
-                {user.venue}
-              </Text>
-            )}
-          </View>
+          <Text className="text-gray-500 text-sm" numberOfLines={1}>
+            {user.bio}
+          </Text>
         </View>
 
         <View className="items-end">
           <View className="flex-row items-center bg-[#FF6B6B]/10 rounded-full px-3 py-1">
             <Ionicons name="location" size={14} color="#FF6B6B" />
             <Text className="text-[#FF6B6B] text-sm font-medium ml-1">
-              {formatDistance(user.distance)}
+              {user.distance}m
             </Text>
           </View>
-          {user.neighborhood && (
-            <Text className="text-gray-400 text-xs mt-1">{user.neighborhood}</Text>
-          )}
         </View>
       </Pressable>
     </Animated.View>
-  );
-}
-
-function ProximitySelector({
-  selectedLevel,
-  onSelect,
-}: {
-  selectedLevel: ProximityLevel;
-  onSelect: (level: ProximityLevel) => void;
-}) {
-  return (
-    <View className="flex-row bg-gray-100 rounded-2xl p-1">
-      {PROXIMITY_OPTIONS.map((option) => (
-        <Pressable
-          key={option.level}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            onSelect(option.level);
-          }}
-          className={cn(
-            "flex-1 py-2 px-2 rounded-xl items-center",
-            selectedLevel === option.level ? "bg-white" : "bg-transparent"
-          )}
-          style={
-            selectedLevel === option.level
-              ? {
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 2,
-                  elevation: 2,
-                }
-              : undefined
-          }
-        >
-          <Text
-            className={cn(
-              "text-xs font-medium text-center",
-              selectedLevel === option.level ? "text-[#FF6B6B]" : "text-gray-500"
-            )}
-            numberOfLines={1}
-          >
-            {option.label}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
   );
 }
 
@@ -174,20 +115,16 @@ export default function RadarScreen() {
   const isProxyActive = useProxyStore((s) => s.isProxyActive);
   const toggleProxyActive = useProxyStore((s) => s.toggleProxyActive);
   const setCurrentLocation = useProxyStore((s) => s.setCurrentLocation);
-  const proximityLevel = useProxyStore((s) => s.proximityLevel);
-  const setProximityLevel = useProxyStore((s) => s.setProximityLevel);
 
   const [locationName, setLocationName] = useState<string | null>(null);
+  const [venueName, setVenueName] = useState<string | null>(null);
 
-  // Filter users based on proximity level
-  const filteredUsers = useMemo(() => {
-    const selectedOption = PROXIMITY_OPTIONS.find((o) => o.level === proximityLevel);
-    if (!selectedOption) return nearbyUsers;
-
+  // Filter users to only show those at the same venue (within threshold)
+  const sameVenueUsers = useMemo(() => {
     return nearbyUsers
-      .filter((user) => user.distance <= selectedOption.maxDistance)
+      .filter((user) => user.distance <= SAME_VENUE_THRESHOLD)
       .sort((a, b) => a.distance - b.distance);
-  }, [nearbyUsers, proximityLevel]);
+  }, [nearbyUsers]);
 
   const pulseScale1 = useSharedValue(1);
   const pulseScale2 = useSharedValue(1);
@@ -218,16 +155,17 @@ export default function RadarScreen() {
         });
 
         if (place) {
-          const venueName = place.name || place.street || "Unknown Venue";
+          const venue = place.name || place.street || "Unknown Venue";
           const city = place.city || place.region || "Unknown City";
           const neighborhood = place.district || place.subregion || undefined;
 
           setCurrentLocation({
-            name: venueName,
+            name: venue,
             city,
             neighborhood,
           });
-          setLocationName(neighborhood ? `${venueName}, ${neighborhood}` : `${venueName}, ${city}`);
+          setVenueName(venue);
+          setLocationName(neighborhood ? `${venue}, ${neighborhood}` : `${venue}, ${city}`);
         }
       } catch (error) {
         console.log("Location error:", error);
@@ -294,8 +232,6 @@ export default function RadarScreen() {
     toggleProxyActive();
   };
 
-  const selectedProximityOption = PROXIMITY_OPTIONS.find((o) => o.level === proximityLevel);
-
   return (
     <View className="flex-1 bg-[#FFF9F5]">
       <View style={{ paddingTop: insets.top }} className="flex-1">
@@ -303,7 +239,7 @@ export default function RadarScreen() {
         <View className="px-6 pt-4 pb-2">
           <Text className="text-[#2D2D2D] text-3xl font-bold">Discover</Text>
           <Text className="text-gray-500 text-base mt-1">
-            Find people nearby
+            People at your location
           </Text>
           {isProxyActive && locationName && (
             <View className="flex-row items-center mt-2">
@@ -383,7 +319,7 @@ export default function RadarScreen() {
                   </Text>
                   <Text className="text-white/80 text-sm">
                     {isProxyActive
-                      ? "Others can see you nearby"
+                      ? "Showing people at this venue"
                       : "Turn on to be discovered"}
                   </Text>
                 </View>
@@ -399,20 +335,25 @@ export default function RadarScreen() {
           </LinearGradient>
         </Animated.View>
 
-        {/* Proximity Selector */}
+        {/* Same Venue Info Badge */}
         {isProxyActive && (
           <Animated.View
             entering={FadeIn.duration(400)}
             className="mx-6 mb-4"
           >
-            <View className="flex-row items-center justify-between mb-2">
-              <Text className="text-[#2D2D2D] text-sm font-medium">Discovery Range</Text>
-              <Text className="text-gray-500 text-xs">{selectedProximityOption?.description}</Text>
+            <View className="bg-[#FF6B6B]/10 rounded-2xl p-3 flex-row items-center">
+              <View className="w-8 h-8 rounded-full bg-[#FF6B6B]/20 items-center justify-center">
+                <Ionicons name="business" size={16} color="#FF6B6B" />
+              </View>
+              <View className="ml-3 flex-1">
+                <Text className="text-[#2D2D2D] text-sm font-medium">
+                  {venueName || "Current Location"}
+                </Text>
+                <Text className="text-gray-500 text-xs">
+                  Only showing people at this exact address
+                </Text>
+              </View>
             </View>
-            <ProximitySelector
-              selectedLevel={proximityLevel}
-              onSelect={setProximityLevel}
-            />
           </Animated.View>
         )}
 
@@ -420,24 +361,24 @@ export default function RadarScreen() {
         <View className="flex-1 px-6">
           <View className="flex-row items-center justify-between mb-4">
             <Text className="text-[#2D2D2D] text-lg font-semibold">
-              People Nearby
+              People Here
             </Text>
             <View className="flex-row items-center">
               <View className="w-2 h-2 rounded-full bg-green-400 mr-2" />
               <Text className="text-gray-500 text-sm">
-                {filteredUsers.length} active
+                {sameVenueUsers.length} here now
               </Text>
             </View>
           </View>
 
           {isProxyActive ? (
-            filteredUsers.length > 0 ? (
+            sameVenueUsers.length > 0 ? (
               <Animated.ScrollView
                 entering={FadeIn.duration(400)}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 20 }}
               >
-                {filteredUsers.map((user, index) => (
+                {sameVenueUsers.map((user, index) => (
                   <NearbyUserCard
                     key={user.id}
                     user={user}
@@ -452,13 +393,13 @@ export default function RadarScreen() {
                 className="flex-1 items-center justify-center"
               >
                 <View className="w-24 h-24 rounded-full bg-[#FFB4A2]/30 items-center justify-center mb-4">
-                  <Ionicons name="search-outline" size={48} color="#FF8E72" />
+                  <Ionicons name="people-outline" size={48} color="#FF8E72" />
                 </View>
                 <Text className="text-[#2D2D2D] text-lg font-semibold text-center">
-                  No one nearby
+                  No one here yet
                 </Text>
-                <Text className="text-gray-500 text-base text-center mt-2">
-                  Try expanding your{"\n"}discovery range
+                <Text className="text-gray-500 text-base text-center mt-2 px-8">
+                  Check the For You tab to{"\n"}discover people across the city
                 </Text>
               </Animated.View>
             )
@@ -471,7 +412,7 @@ export default function RadarScreen() {
                 <Ionicons name="radio-outline" size={48} color="#9CA3AF" />
               </View>
               <Text className="text-gray-500 text-lg text-center">
-                Turn on Proxy to see{"\n"}people around you
+                Turn on Proxy to see{"\n"}people at this venue
               </Text>
             </Animated.View>
           )}
