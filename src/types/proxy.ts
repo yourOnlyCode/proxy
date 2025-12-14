@@ -50,6 +50,7 @@ export interface UserProfile {
   age: number;
   bio: string;
   photoUrl: string;
+  photos: string[]; // Array of photo URLs for gallery view
   socials: SocialLinks;
   isActive: boolean;
   lastSeen: Date;

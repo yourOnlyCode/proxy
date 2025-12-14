@@ -10,6 +10,7 @@ import WelcomeScreen from "../screens/WelcomeScreen";
 import ProfileSetupScreen from "../screens/ProfileSetupScreen";
 import SocialsSetupScreen from "../screens/SocialsSetupScreen";
 import RadarScreen from "../screens/RadarScreen";
+import ForYouScreen from "../screens/ForYouScreen";
 import ConnectionsScreen from "../screens/ConnectionsScreen";
 import HistoryScreen from "../screens/HistoryScreen";
 import ProfileScreen from "../screens/ProfileScreen";
@@ -28,6 +29,7 @@ export type RootStackParamList = {
 
 export type MainTabParamList = {
   Radar: undefined;
+  ForYou: undefined;
   Connections: undefined;
   History: undefined;
   Profile: undefined;
@@ -68,6 +70,16 @@ function MainTabs() {
           tabBarLabel: "Discover",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="radio" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="ForYou"
+        component={ForYouScreen}
+        options={{
+          tabBarLabel: "For You",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="play-circle" size={size} color={color} />
           ),
         }}
       />

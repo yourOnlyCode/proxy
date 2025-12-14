@@ -68,6 +68,7 @@ export default function ProfileSetupScreen({ navigation }: ProfileSetupScreenPro
       age: ageNum,
       bio: bio.trim() || "Hey there! I'm new to Proxy.",
       photoUrl: photoUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop&crop=face",
+      photos: photoUrl ? [photoUrl] : ["https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&h=1000&fit=crop&crop=face"],
       socials: {},
       isActive: false,
       lastSeen: new Date(),

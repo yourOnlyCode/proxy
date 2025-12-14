@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, Pressable, ScrollView } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { View, Text, Pressable, ScrollView, Dimensions, FlatList } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
@@ -19,11 +19,12 @@ import { RouteProp, useRoute, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import { useProxyStore } from "../state/proxyStore";
-import { NearbyUser } from "../types/proxy";
 import { cn } from "../utils/cn";
 
 type UserDetailRouteProp = RouteProp<RootStackParamList, "UserDetail">;
 type UserDetailNavProp = NativeStackNavigationProp<RootStackParamList, "UserDetail">;
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 function SocialBadge({
   icon,
@@ -49,6 +50,68 @@ function SocialBadge({
       <Text className="text-[#2D2D2D] text-sm font-medium ml-2">
         @{username}
       </Text>
+    </View>
+  );
+}
+
+function PhotoGallery({ photos, photoUrl }: { photos: string[]; photoUrl: string }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // Use photos array if available, otherwise fall back to single photoUrl
+  const imageList = photos && photos.length > 0 ? photos : [photoUrl];
+
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: Array<{ index: number | null }> }) => {
+    if (viewableItems.length > 0 && viewableItems[0].index !== null) {
+      setActiveIndex(viewableItems[0].index);
+    }
+  }).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+  }).current;
+
+  return (
+    <View>
+      <FlatList
+        data={imageList}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        keyExtractor={(_, index) => index.toString()}
+        renderItem={({ item }) => (
+          <Image
+            source={{ uri: item }}
+            style={{ width: SCREEN_WIDTH, height: 400 }}
+            contentFit="cover"
+          />
+        )}
+      />
+
+      {/* Photo Indicators */}
+      {imageList.length > 1 && (
+        <View className="absolute top-4 left-0 right-0 flex-row justify-center z-10">
+          <View className="flex-row bg-black/30 rounded-full px-2 py-1">
+            {imageList.map((_, index) => (
+              <View
+                key={index}
+                className={cn(
+                  "w-2 h-2 rounded-full mx-1",
+                  index === activeIndex ? "bg-white" : "bg-white/40"
+                )}
+              />
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Swipe hint on first photo */}
+      {imageList.length > 1 && activeIndex === 0 && (
+        <View className="absolute right-4 top-1/2 -mt-4 bg-black/40 rounded-full p-2">
+          <Ionicons name="chevron-forward" size={20} color="white" />
+        </View>
+      )}
     </View>
   );
 }
@@ -144,13 +207,9 @@ export default function UserDetailScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Image */}
+        {/* Photo Gallery */}
         <Animated.View entering={FadeIn.duration(400)}>
-          <Image
-            source={{ uri: user.photoUrl }}
-            style={{ width: "100%", height: 400 }}
-            contentFit="cover"
-          />
+          <PhotoGallery photos={user.photos} photoUrl={user.photoUrl} />
           <LinearGradient
             colors={["transparent", "rgba(0,0,0,0.6)"]}
             style={{
