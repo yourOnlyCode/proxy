@@ -1,8 +1,9 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, Pressable, Switch } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
+import * as Location from "expo-location";
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -111,6 +112,10 @@ export default function RadarScreen() {
   const nearbyUsers = useProxyStore((s) => s.nearbyUsers);
   const isProxyActive = useProxyStore((s) => s.isProxyActive);
   const toggleProxyActive = useProxyStore((s) => s.toggleProxyActive);
+  const currentLocation = useProxyStore((s) => s.currentLocation);
+  const setCurrentLocation = useProxyStore((s) => s.setCurrentLocation);
+
+  const [locationName, setLocationName] = useState<string | null>(null);
 
   const pulseScale1 = useSharedValue(1);
   const pulseScale2 = useSharedValue(1);
@@ -118,6 +123,51 @@ export default function RadarScreen() {
   const pulseOpacity1 = useSharedValue(0.3);
   const pulseOpacity2 = useSharedValue(0.2);
   const pulseOpacity3 = useSharedValue(0.1);
+
+  // Fetch location when Proxy is activated
+  useEffect(() => {
+    const fetchLocation = async () => {
+      if (!isProxyActive) return;
+
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          setCurrentLocation({
+            name: "Unknown Venue",
+            city: "Unknown City",
+          });
+          return;
+        }
+
+        const location = await Location.getCurrentPositionAsync({});
+        const [place] = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+
+        if (place) {
+          const venueName = place.name || place.street || "Unknown Venue";
+          const city = place.city || place.region || "Unknown City";
+          const neighborhood = place.district || place.subregion || undefined;
+
+          setCurrentLocation({
+            name: venueName,
+            city,
+            neighborhood,
+          });
+          setLocationName(neighborhood ? `${venueName}, ${neighborhood}` : `${venueName}, ${city}`);
+        }
+      } catch (error) {
+        console.log("Location error:", error);
+        setCurrentLocation({
+          name: "Unknown Venue",
+          city: "Unknown City",
+        });
+      }
+    };
+
+    fetchLocation();
+  }, [isProxyActive]);
 
   useEffect(() => {
     if (isProxyActive) {
@@ -181,6 +231,12 @@ export default function RadarScreen() {
           <Text className="text-gray-500 text-base mt-1">
             Find people nearby
           </Text>
+          {isProxyActive && locationName && (
+            <View className="flex-row items-center mt-2">
+              <Ionicons name="location" size={14} color="#FF6B6B" />
+              <Text className="text-[#FF6B6B] text-sm ml-1">{locationName}</Text>
+            </View>
+          )}
         </View>
 
         {/* Proxy Toggle */}

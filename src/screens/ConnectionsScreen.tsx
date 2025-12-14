@@ -58,9 +58,18 @@ function ConnectionCard({
             <Text className="text-[#2D2D2D] text-lg font-semibold">
               {connection.user.name}, {connection.user.age}
             </Text>
-            <Text className="text-gray-500 text-sm" numberOfLines={1}>
-              {connection.user.bio}
-            </Text>
+            {connection.location ? (
+              <View className="flex-row items-center mt-0.5">
+                <Ionicons name="location-outline" size={12} color="#9CA3AF" />
+                <Text className="text-gray-500 text-sm ml-1" numberOfLines={1}>
+                  {connection.location.name}, {connection.location.city}
+                </Text>
+              </View>
+            ) : (
+              <Text className="text-gray-500 text-sm" numberOfLines={1}>
+                {connection.user.bio}
+              </Text>
+            )}
           </View>
 
           <View className={cn("rounded-full px-3 py-1", status.bg)}>

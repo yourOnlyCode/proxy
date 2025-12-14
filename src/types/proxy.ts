@@ -26,6 +26,12 @@ export interface NearbyUser extends UserProfile {
 
 export type ConnectionStatus = "pending" | "accepted" | "declined";
 
+export interface ConnectionLocation {
+  name: string; // e.g., "The Rooftop Bar"
+  city: string; // e.g., "San Francisco"
+  neighborhood?: string; // e.g., "Mission District"
+}
+
 export interface Connection {
   id: string;
   fromUserId: string;
@@ -33,6 +39,7 @@ export interface Connection {
   status: ConnectionStatus;
   timestamp: Date;
   user: UserProfile; // The other user in the connection
+  location?: ConnectionLocation; // Where the connection was made
 }
 
 export interface CrossedPath {

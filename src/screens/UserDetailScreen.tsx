@@ -191,6 +191,33 @@ export default function UserDetailScreen() {
           <Text className="text-gray-600 text-base leading-6">{user.bio}</Text>
         </Animated.View>
 
+        {/* Met At Location - Show if connection exists with location */}
+        {existingConnection?.location && (
+          <Animated.View
+            entering={FadeInUp.duration(500).delay(300)}
+            className="px-6 mt-6"
+          >
+            <Text className="text-[#2D2D2D] text-lg font-semibold mb-2">
+              Met at
+            </Text>
+            <View className="bg-[#FF6B6B]/10 rounded-2xl p-4 flex-row items-center">
+              <View className="w-10 h-10 rounded-full bg-[#FF6B6B]/20 items-center justify-center">
+                <Ionicons name="location" size={20} color="#FF6B6B" />
+              </View>
+              <View className="ml-3 flex-1">
+                <Text className="text-[#2D2D2D] font-medium">
+                  {existingConnection.location.name}
+                </Text>
+                <Text className="text-gray-500 text-sm">
+                  {existingConnection.location.neighborhood
+                    ? `${existingConnection.location.neighborhood}, ${existingConnection.location.city}`
+                    : existingConnection.location.city}
+                </Text>
+              </View>
+            </View>
+          </Animated.View>
+        )}
+
         {/* Socials - Only show if connected */}
         {connectionStatus === "accepted" &&
           (user.socials.instagram ||

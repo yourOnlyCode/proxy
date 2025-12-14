@@ -7,7 +7,7 @@ import {
   NearbyUser,
   Connection,
   CrossedPath,
-  ConnectionStatus,
+  ConnectionLocation,
 } from "../types/proxy";
 
 // Mock data for nearby users
@@ -95,12 +95,16 @@ interface ProxyState {
   // History
   crossedPaths: CrossedPath[];
 
+  // Current location
+  currentLocation: ConnectionLocation | null;
+
   // Actions
   setCurrentUser: (user: UserProfile) => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
   updateSocials: (socials: SocialLinks) => void;
   completeOnboarding: () => void;
   toggleProxyActive: () => void;
+  setCurrentLocation: (location: ConnectionLocation) => void;
 
   sendInterest: (userId: string) => void;
   respondToInterest: (connectionId: string, accept: boolean) => void;
@@ -119,6 +123,7 @@ const initialState = {
   connections: [],
   pendingRequests: [],
   crossedPaths: [],
+  currentLocation: null as ConnectionLocation | null,
 };
 
 export const useProxyStore = create<ProxyState>()(
@@ -147,8 +152,10 @@ export const useProxyStore = create<ProxyState>()(
       toggleProxyActive: () =>
         set((state) => ({ isProxyActive: !state.isProxyActive })),
 
+      setCurrentLocation: (location) => set({ currentLocation: location }),
+
       sendInterest: (userId) => {
-        const { nearbyUsers, currentUser, connections } = get();
+        const { nearbyUsers, currentUser, connections, currentLocation } = get();
         const targetUser = nearbyUsers.find((u) => u.id === userId);
 
         if (!targetUser || !currentUser) return;
@@ -166,6 +173,7 @@ export const useProxyStore = create<ProxyState>()(
           status: "pending",
           timestamp: new Date(),
           user: targetUser,
+          location: currentLocation || undefined,
         };
 
         set((state) => ({
