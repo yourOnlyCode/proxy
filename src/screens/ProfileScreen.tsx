@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, Pressable, ScrollView, Alert } from "react-native";
+import React, { useState } from "react";
+import { View, Text, Pressable, ScrollView, Modal, ActivityIndicator, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
@@ -7,6 +7,7 @@ import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useProxyStore } from "../state/proxyStore";
+import { signOut } from "../api/supabase";
 
 function SocialLink({
   icon,
@@ -51,21 +52,28 @@ export default function ProfileScreen() {
   const isProxyActive = useProxyStore((s) => s.isProxyActive);
   const connections = useProxyStore((s) => s.connections);
   const reset = useProxyStore((s) => s.reset);
+  const setAuthUser = useProxyStore((s) => s.setAuthUser);
+
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const acceptedCount = connections.filter((c) => c.status === "accepted").length;
 
   const handleLogout = () => {
     Alert.alert(
-      "Reset Profile",
-      "This will reset your profile and all data. Are you sure?",
+      "Sign Out",
+      "Are you sure you want to sign out?",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Reset",
+          text: "Sign Out",
           style: "destructive",
-          onPress: () => {
+          onPress: async () => {
+            setLoggingOut(true);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            await signOut();
+            setAuthUser(null);
             reset();
+            setLoggingOut(false);
           },
         },
       ]
@@ -238,6 +246,7 @@ export default function ProfileScreen() {
 
           <Pressable
             onPress={handleLogout}
+            disabled={loggingOut}
             className="bg-white rounded-2xl p-4 flex-row items-center active:opacity-90"
             style={{
               shadowColor: "#000",
@@ -251,9 +260,13 @@ export default function ProfileScreen() {
               <Ionicons name="log-out-outline" size={20} color="#EF4444" />
             </View>
             <Text className="text-red-500 font-medium ml-3 flex-1">
-              Reset Profile
+              {loggingOut ? "Signing out..." : "Sign Out"}
             </Text>
-            <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+            {loggingOut ? (
+              <ActivityIndicator size="small" color="#EF4444" />
+            ) : (
+              <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+            )}
           </Pressable>
         </Animated.View>
       </ScrollView>

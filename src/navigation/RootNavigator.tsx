@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useProxyStore } from "../state/proxyStore";
 
 // Screens
+import AuthScreen from "../screens/AuthScreen";
 import WelcomeScreen from "../screens/WelcomeScreen";
 import ProfileSetupScreen from "../screens/ProfileSetupScreen";
 import SocialsSetupScreen from "../screens/SocialsSetupScreen";
@@ -16,6 +17,7 @@ import UserDetailScreen from "../screens/UserDetailScreen";
 import ChatScreen from "../screens/ChatScreen";
 
 export type RootStackParamList = {
+  Auth: undefined;
   Welcome: undefined;
   ProfileSetup: undefined;
   SocialsSetup: undefined;
@@ -104,6 +106,7 @@ function MainTabs() {
 }
 
 export default function RootNavigator() {
+  const authUser = useProxyStore((s) => s.authUser);
   const isOnboarded = useProxyStore((s) => s.isOnboarded);
 
   return (
@@ -113,13 +116,18 @@ export default function RootNavigator() {
         animation: "slide_from_right",
       }}
     >
-      {!isOnboarded ? (
+      {!authUser ? (
+        // Auth flow - user needs to log in
+        <Stack.Screen name="Auth" component={AuthScreen} />
+      ) : !isOnboarded ? (
+        // Onboarding flow - user logged in but needs to set up profile
         <>
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
           <Stack.Screen name="SocialsSetup" component={SocialsSetupScreen} />
         </>
       ) : (
+        // Main app - user is logged in and onboarded
         <>
           <Stack.Screen name="MainTabs" component={MainTabs} />
           <Stack.Screen

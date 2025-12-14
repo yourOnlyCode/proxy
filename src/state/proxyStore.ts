@@ -276,7 +276,15 @@ const mockReplies = [
   "Yeah this place is amazing right?",
 ];
 
+interface AuthUser {
+  id: string;
+  email: string;
+}
+
 interface ProxyState {
+  // Auth
+  authUser: AuthUser | null;
+
   // User profile
   currentUser: UserProfile | null;
   isOnboarded: boolean;
@@ -302,6 +310,7 @@ interface ProxyState {
   conversations: Record<string, Conversation>;
 
   // Actions
+  setAuthUser: (user: AuthUser | null) => void;
   setCurrentUser: (user: UserProfile) => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
   updateSocials: (socials: SocialLinks) => void;
@@ -325,6 +334,7 @@ interface ProxyState {
 }
 
 const initialState = {
+  authUser: null as AuthUser | null,
   currentUser: null,
   isOnboarded: false,
   isProxyActive: false,
@@ -341,6 +351,8 @@ export const useProxyStore = create<ProxyState>()(
   persist(
     (set, get) => ({
       ...initialState,
+
+      setAuthUser: (user) => set({ authUser: user }),
 
       setCurrentUser: (user) => set({ currentUser: user }),
 
