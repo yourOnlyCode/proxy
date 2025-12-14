@@ -66,37 +66,14 @@ export default function AuthScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setLoading(true);
 
-    try {
-      if (mode === "signup") {
-        const { data, error: signUpError } = await signUp(email.trim(), password);
-        if (signUpError) {
-          setError(signUpError.message);
-          return;
-        }
-        if (data?.user) {
-          setAuthUser({ id: data.user.id, email: data.user.email });
-          // If no session (email confirmation required), show message
-          if (!data.session) {
-            setError("Check your email to confirm your account, then log in.");
-            setMode("login");
-            return;
-          }
-        }
-      } else {
-        const { data, error: signInError } = await signIn(email.trim(), password);
-        if (signInError) {
-          setError(signInError.message);
-          return;
-        }
-        if (data?.user) {
-          setAuthUser({ id: data.user.id, email: data.user.email });
-        }
-      }
-    } catch (err) {
-      setError("Something went wrong. Please try again.");
-    } finally {
+    // Mock login - skip Supabase for now
+    setTimeout(() => {
+      setAuthUser({
+        id: "mock-user-" + Date.now(),
+        email: email.trim()
+      });
       setLoading(false);
-    }
+    }, 800);
   };
 
   const toggleMode = () => {
