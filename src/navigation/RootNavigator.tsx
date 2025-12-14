@@ -13,6 +13,7 @@ import ConnectionsScreen from "../screens/ConnectionsScreen";
 import HistoryScreen from "../screens/HistoryScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import UserDetailScreen from "../screens/UserDetailScreen";
+import ChatScreen from "../screens/ChatScreen";
 
 export type RootStackParamList = {
   Welcome: undefined;
@@ -20,6 +21,7 @@ export type RootStackParamList = {
   SocialsSetup: undefined;
   MainTabs: undefined;
   UserDetail: { userId: string };
+  Chat: { connectionId: string };
 };
 
 export type MainTabParamList = {
@@ -126,6 +128,13 @@ export default function RootNavigator() {
             options={{
               presentation: "modal",
               animation: "slide_from_bottom",
+            }}
+          />
+          <Stack.Screen
+            name="Chat"
+            component={ChatScreen}
+            options={{
+              animation: "slide_from_right",
             }}
           />
         </>

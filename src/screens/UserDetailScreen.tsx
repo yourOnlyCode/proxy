@@ -16,12 +16,14 @@ import Animated, {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { RouteProp, useRoute, useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import { useProxyStore } from "../state/proxyStore";
 import { NearbyUser } from "../types/proxy";
 import { cn } from "../utils/cn";
 
 type UserDetailRouteProp = RouteProp<RootStackParamList, "UserDetail">;
+type UserDetailNavProp = NativeStackNavigationProp<RootStackParamList, "UserDetail">;
 
 function SocialBadge({
   icon,
@@ -53,7 +55,7 @@ function SocialBadge({
 
 export default function UserDetailScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
+  const navigation = useNavigation<UserDetailNavProp>();
   const route = useRoute<UserDetailRouteProp>();
   const { userId } = route.params;
 
@@ -364,14 +366,20 @@ export default function UserDetailScreen() {
             </View>
           </Animated.View>
         ) : connectionStatus === "accepted" ? (
-          <View className="bg-green-500 rounded-full py-4 items-center">
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              navigation.navigate("Chat", { connectionId: existingConnection!.id });
+            }}
+            className="bg-[#FF6B6B] rounded-full py-4 items-center active:bg-[#FF5252]"
+          >
             <View className="flex-row items-center">
-              <Ionicons name="heart" size={24} color="white" />
+              <Ionicons name="chatbubble" size={24} color="white" />
               <Text className="text-white text-lg font-semibold ml-2">
-                Connected
+                Send Message
               </Text>
             </View>
-          </View>
+          </Pressable>
         ) : connectionStatus === "declined" ? (
           <View className="bg-gray-300 rounded-full py-4 items-center">
             <Text className="text-gray-600 text-lg font-semibold">

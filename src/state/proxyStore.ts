@@ -9,6 +9,8 @@ import {
   CrossedPath,
   ConnectionLocation,
   ProximityLevel,
+  Message,
+  Conversation,
 } from "../types/proxy";
 
 // Mock data for nearby users - expanded with location info and varied distances
@@ -262,6 +264,18 @@ const mockNearbyUsers: NearbyUser[] = [
   },
 ];
 
+// Mock reply messages for demo
+const mockReplies = [
+  "Hey! Nice to meet you too!",
+  "Thanks for reaching out! How are you?",
+  "Oh cool! What brings you here tonight?",
+  "Haha yeah the vibes here are great!",
+  "Would love to chat more! Where are you at?",
+  "That sounds fun! I'm down",
+  "Nice! What do you do?",
+  "Yeah this place is amazing right?",
+];
+
 interface ProxyState {
   // User profile
   currentUser: UserProfile | null;
@@ -284,6 +298,9 @@ interface ProxyState {
   // Current location
   currentLocation: ConnectionLocation | null;
 
+  // Messaging
+  conversations: Record<string, Conversation>;
+
   // Actions
   setCurrentUser: (user: UserProfile) => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
@@ -299,6 +316,11 @@ interface ProxyState {
   addCrossedPath: (user: NearbyUser) => void;
   clearHistory: () => void;
 
+  // Messaging actions
+  sendMessage: (connectionId: string, text: string) => void;
+  markMessagesAsRead: (connectionId: string) => void;
+  getConversation: (connectionId: string) => Conversation | undefined;
+
   reset: () => void;
 }
 
@@ -312,6 +334,7 @@ const initialState = {
   pendingRequests: [],
   crossedPaths: [],
   currentLocation: null as ConnectionLocation | null,
+  conversations: {} as Record<string, Conversation>,
 };
 
 export const useProxyStore = create<ProxyState>()(
@@ -402,6 +425,94 @@ export const useProxyStore = create<ProxyState>()(
 
       clearHistory: () => set({ crossedPaths: [] }),
 
+      // Messaging
+      sendMessage: (connectionId, text) => {
+        const { currentUser, conversations, connections } = get();
+        if (!currentUser || !text.trim()) return;
+
+        const connection = connections.find((c) => c.id === connectionId);
+        if (!connection || connection.status !== "accepted") return;
+
+        const newMessage: Message = {
+          id: `msg_${Date.now()}`,
+          connectionId,
+          senderId: currentUser.id,
+          text: text.trim(),
+          timestamp: new Date(),
+          read: true,
+        };
+
+        const existingConvo = conversations[connectionId] || {
+          connectionId,
+          messages: [],
+          unreadCount: 0,
+        };
+
+        const updatedConvo: Conversation = {
+          ...existingConvo,
+          messages: [...existingConvo.messages, newMessage],
+          lastMessage: newMessage,
+        };
+
+        set((state) => ({
+          conversations: {
+            ...state.conversations,
+            [connectionId]: updatedConvo,
+          },
+        }));
+
+        // Simulate reply after 1-3 seconds
+        setTimeout(() => {
+          const { conversations: currentConvos, currentUser: user } = get();
+          if (!user) return;
+
+          const replyMessage: Message = {
+            id: `msg_${Date.now()}`,
+            connectionId,
+            senderId: connection.user.id,
+            text: mockReplies[Math.floor(Math.random() * mockReplies.length)],
+            timestamp: new Date(),
+            read: false,
+          };
+
+          const convo = currentConvos[connectionId];
+          if (!convo) return;
+
+          set((state) => ({
+            conversations: {
+              ...state.conversations,
+              [connectionId]: {
+                ...convo,
+                messages: [...convo.messages, replyMessage],
+                lastMessage: replyMessage,
+                unreadCount: convo.unreadCount + 1,
+              },
+            },
+          }));
+        }, 1000 + Math.random() * 2000);
+      },
+
+      markMessagesAsRead: (connectionId) => {
+        const { conversations } = get();
+        const convo = conversations[connectionId];
+        if (!convo) return;
+
+        set((state) => ({
+          conversations: {
+            ...state.conversations,
+            [connectionId]: {
+              ...convo,
+              messages: convo.messages.map((m) => ({ ...m, read: true })),
+              unreadCount: 0,
+            },
+          },
+        }));
+      },
+
+      getConversation: (connectionId) => {
+        return get().conversations[connectionId];
+      },
+
       reset: () => set(initialState),
     }),
     {
@@ -413,6 +524,7 @@ export const useProxyStore = create<ProxyState>()(
         connections: state.connections,
         crossedPaths: state.crossedPaths,
         proximityLevel: state.proximityLevel,
+        conversations: state.conversations,
       }),
     }
   )

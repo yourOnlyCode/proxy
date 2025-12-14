@@ -89,3 +89,20 @@ export interface CrossedPath {
   timestamp: Date;
   distance: number;
 }
+
+// Messaging types
+export interface Message {
+  id: string;
+  connectionId: string;
+  senderId: string;
+  text: string;
+  timestamp: Date;
+  read: boolean;
+}
+
+export interface Conversation {
+  connectionId: string;
+  messages: Message[];
+  lastMessage?: Message;
+  unreadCount: number;
+}

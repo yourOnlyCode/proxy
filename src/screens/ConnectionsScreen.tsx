@@ -9,7 +9,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import { useProxyStore } from "../state/proxyStore";
-import { Connection } from "../types/proxy";
+import { Connection, Conversation } from "../types/proxy";
 import { cn } from "../utils/cn";
 
 type ConnectionsScreenNavProp = NativeStackNavigationProp<RootStackParamList>;
@@ -18,10 +18,12 @@ function ConnectionCard({
   connection,
   index,
   onPress,
+  conversation,
 }: {
   connection: Connection;
   index: number;
   onPress: () => void;
+  conversation?: Conversation;
 }) {
   const statusColors = {
     pending: { bg: "bg-amber-100", text: "text-amber-600", label: "Pending" },
@@ -30,6 +32,8 @@ function ConnectionCard({
   };
 
   const status = statusColors[connection.status];
+  const unreadCount = conversation?.unreadCount || 0;
+  const lastMessage = conversation?.lastMessage;
 
   return (
     <Animated.View entering={FadeInDown.duration(500).delay(index * 80)}>
@@ -48,17 +52,36 @@ function ConnectionCard({
         }}
       >
         <View className="flex-row items-center">
-          <Image
-            source={{ uri: connection.user.photoUrl }}
-            style={{ width: 56, height: 56, borderRadius: 28 }}
-            contentFit="cover"
-          />
+          <View className="relative">
+            <Image
+              source={{ uri: connection.user.photoUrl }}
+              style={{ width: 56, height: 56, borderRadius: 28 }}
+              contentFit="cover"
+            />
+            {unreadCount > 0 && (
+              <View className="absolute -top-1 -right-1 bg-[#FF6B6B] rounded-full min-w-[20px] h-5 items-center justify-center px-1">
+                <Text className="text-white text-xs font-bold">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </Text>
+              </View>
+            )}
+          </View>
 
           <View className="flex-1 ml-4">
             <Text className="text-[#2D2D2D] text-lg font-semibold">
               {connection.user.name}, {connection.user.age}
             </Text>
-            {connection.location ? (
+            {connection.status === "accepted" && lastMessage ? (
+              <Text
+                className={cn(
+                  "text-sm mt-0.5",
+                  unreadCount > 0 ? "text-[#2D2D2D] font-medium" : "text-gray-500"
+                )}
+                numberOfLines={1}
+              >
+                {lastMessage.text}
+              </Text>
+            ) : connection.location ? (
               <View className="flex-row items-center mt-0.5">
                 <Ionicons name="location-outline" size={12} color="#9CA3AF" />
                 <Text className="text-gray-500 text-sm ml-1" numberOfLines={1}>
@@ -72,11 +95,19 @@ function ConnectionCard({
             )}
           </View>
 
-          <View className={cn("rounded-full px-3 py-1", status.bg)}>
-            <Text className={cn("text-sm font-medium", status.text)}>
-              {status.label}
-            </Text>
-          </View>
+          {connection.status === "accepted" ? (
+            <View className="items-center">
+              <View className="w-10 h-10 rounded-full bg-[#FF6B6B]/10 items-center justify-center">
+                <Ionicons name="chatbubble" size={18} color="#FF6B6B" />
+              </View>
+            </View>
+          ) : (
+            <View className={cn("rounded-full px-3 py-1", status.bg)}>
+              <Text className={cn("text-sm font-medium", status.text)}>
+                {status.label}
+              </Text>
+            </View>
+          )}
         </View>
 
         {connection.status === "accepted" && (
@@ -116,6 +147,7 @@ export default function ConnectionsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<ConnectionsScreenNavProp>();
   const connections = useProxyStore((s) => s.connections);
+  const conversations = useProxyStore((s) => s.conversations);
 
   const acceptedConnections = connections.filter((c) => c.status === "accepted");
   const pendingConnections = connections.filter((c) => c.status === "pending");
@@ -157,9 +189,9 @@ export default function ConnectionsScreen() {
             {acceptedConnections.length > 0 && (
               <View className="mb-6">
                 <View className="flex-row items-center mb-3">
-                  <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+                  <Ionicons name="chatbubbles" size={20} color="#FF6B6B" />
                   <Text className="text-[#2D2D2D] font-semibold ml-2">
-                    Connected ({acceptedConnections.length})
+                    Messages ({acceptedConnections.length})
                   </Text>
                 </View>
                 {acceptedConnections.map((conn, index) => (
@@ -167,8 +199,9 @@ export default function ConnectionsScreen() {
                     key={conn.id}
                     connection={conn}
                     index={index}
+                    conversation={conversations[conn.id]}
                     onPress={() =>
-                      navigation.navigate("UserDetail", { userId: conn.user.id })
+                      navigation.navigate("Chat", { connectionId: conn.id })
                     }
                   />
                 ))}
