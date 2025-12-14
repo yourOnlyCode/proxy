@@ -39,3 +39,6 @@ android/
 
 # Expo log
 expo.log
+
+# Markdown files
+*.md
