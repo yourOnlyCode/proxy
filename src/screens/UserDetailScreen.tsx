@@ -191,50 +191,75 @@ export default function UserDetailScreen() {
           <Text className="text-gray-600 text-base leading-6">{user.bio}</Text>
         </Animated.View>
 
-        {/* Socials */}
-        {(user.socials.instagram ||
-          user.socials.twitter ||
-          user.socials.snapchat ||
-          user.socials.tiktok) && (
-          <Animated.View
-            entering={FadeInUp.duration(500).delay(400)}
-            className="px-6 mt-6"
-          >
-            <Text className="text-[#2D2D2D] text-lg font-semibold mb-3">
-              Socials
-            </Text>
-            <View className="flex-row flex-wrap">
-              {user.socials.instagram && (
-                <SocialBadge
-                  icon="logo-instagram"
-                  username={user.socials.instagram}
-                  color="#E1306C"
-                />
-              )}
-              {user.socials.twitter && (
-                <SocialBadge
-                  icon="logo-twitter"
-                  username={user.socials.twitter}
-                  color="#1DA1F2"
-                />
-              )}
-              {user.socials.snapchat && (
-                <SocialBadge
-                  icon="logo-snapchat"
-                  username={user.socials.snapchat}
-                  color="#FFFC00"
-                />
-              )}
-              {user.socials.tiktok && (
-                <SocialBadge
-                  icon="logo-tiktok"
-                  username={user.socials.tiktok}
-                  color="#000000"
-                />
-              )}
-            </View>
-          </Animated.View>
-        )}
+        {/* Socials - Only show if connected */}
+        {connectionStatus === "accepted" &&
+          (user.socials.instagram ||
+            user.socials.twitter ||
+            user.socials.snapchat ||
+            user.socials.tiktok) && (
+            <Animated.View
+              entering={FadeInUp.duration(500).delay(400)}
+              className="px-6 mt-6"
+            >
+              <Text className="text-[#2D2D2D] text-lg font-semibold mb-3">
+                Socials
+              </Text>
+              <View className="flex-row flex-wrap">
+                {user.socials.instagram && (
+                  <SocialBadge
+                    icon="logo-instagram"
+                    username={user.socials.instagram}
+                    color="#E1306C"
+                  />
+                )}
+                {user.socials.twitter && (
+                  <SocialBadge
+                    icon="logo-twitter"
+                    username={user.socials.twitter}
+                    color="#1DA1F2"
+                  />
+                )}
+                {user.socials.snapchat && (
+                  <SocialBadge
+                    icon="logo-snapchat"
+                    username={user.socials.snapchat}
+                    color="#FFFC00"
+                  />
+                )}
+                {user.socials.tiktok && (
+                  <SocialBadge
+                    icon="logo-tiktok"
+                    username={user.socials.tiktok}
+                    color="#000000"
+                  />
+                )}
+              </View>
+            </Animated.View>
+          )}
+
+        {/* Locked Socials Indicator - Show when not connected */}
+        {connectionStatus !== "accepted" &&
+          (user.socials.instagram ||
+            user.socials.twitter ||
+            user.socials.snapchat ||
+            user.socials.tiktok) && (
+            <Animated.View
+              entering={FadeInUp.duration(500).delay(400)}
+              className="px-6 mt-6"
+            >
+              <View className="bg-gray-100 rounded-2xl p-4 flex-row items-center">
+                <View className="w-10 h-10 rounded-full bg-gray-200 items-center justify-center">
+                  <Ionicons name="lock-closed" size={20} color="#9CA3AF" />
+                </View>
+                <View className="ml-3 flex-1">
+                  <Text className="text-[#2D2D2D] font-medium">Socials Hidden</Text>
+                  <Text className="text-gray-500 text-sm">
+                    Connect to see their social profiles
+                  </Text>
+                </View>
+              </View>
+            </Animated.View>
+          )}
 
         {/* Connection Status */}
         {connectionStatus && connectionStatus !== "pending" && (
